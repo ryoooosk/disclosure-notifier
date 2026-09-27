@@ -4,6 +4,7 @@
   "description": "TDnet の適時開示をウォッチリストで絞ってメール通知する",
   "main": "index.js",
   "scripts": {
+    "dev": "node --watch --env-file=.env src/server.ts",
     "check": "biome check --write --no-errors-on-unmatched",
     "lint": "biome lint --write",
     "format": "biome format --write",
