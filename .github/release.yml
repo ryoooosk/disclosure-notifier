@@ -1,0 +1,23 @@
+changelog:
+  exclude:
+    labels:
+      - wip
+      - duplicate
+      - invalid
+      - wontfix
+  categories:
+    - title: 新機能
+      labels:
+        - enhancement
+    - title: 不具合修正
+      labels:
+        - bug
+    - title: リファクタリング
+      labels:
+        - refactor
+    - title: ドキュメント
+      labels:
+        - documentation
+    - title: その他の変更
+      labels:
+        - "*"
