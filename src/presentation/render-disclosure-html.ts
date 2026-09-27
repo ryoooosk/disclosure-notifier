@@ -5,6 +5,7 @@ const kindLabel: Record<DisclosureKind, string> = {
   guidanceRevision: '業績予想修正',
   specialLoss: '特別損失',
   tenderOffer: '公開買付け',
+  largeHolding: '大量保有',
   merger: '組織再編',
   subsidiary: '子会社異動',
   alliance: '業務提携',
@@ -14,6 +15,8 @@ const kindLabel: Record<DisclosureKind, string> = {
   buyback: '自己株取得',
   earnings: '決算短信',
   earningsMaterial: '決算補足資料',
+  annualReport: '有価証券報告書',
+  semiAnnualReport: '半期報告書',
   monthlyReport: '月次',
   midTermPlan: '中期経営計画',
   financing: '資金調達',
@@ -35,6 +38,11 @@ const formatTime = (isoDatetime: string) =>
 const heading = (disclosures: readonly Disclosure[]) =>
   `ウォッチリストの開示 ${disclosures.length} 件`;
 
+const titleCell = (d: Disclosure) =>
+  d.documentUrl === null
+    ? escapeHtml(d.title)
+    : `<a href="${escapeHtml(d.documentUrl)}">${escapeHtml(d.title)}</a>`;
+
 export function renderDisclosureHtml(
   disclosures: readonly Disclosure[],
 ): string {
@@ -47,7 +55,7 @@ export function renderDisclosureHtml(
         <td style="padding:8px;border-bottom:1px solid #e5e5e5;">${escapeHtml(d.companyName)}</td>
         <td style="padding:8px;border-bottom:1px solid #e5e5e5;white-space:nowrap;">${kindLabel[d.kind]}</td>
         <td style="padding:8px;border-bottom:1px solid #e5e5e5;">
-          <a href="${escapeHtml(d.documentUrl)}">${escapeHtml(d.title)}</a>
+          ${titleCell(d)}
         </td>
       </tr>`,
     )
@@ -81,10 +89,13 @@ export function renderDisclosureHtml(
 export function renderDisclosureText(
   disclosures: readonly Disclosure[],
 ): string {
-  const blocks = disclosures.map(
-    (d) =>
-      `${formatTime(d.disclosedAt)} ${d.code} ${d.companyName} [${kindLabel[d.kind]}]\n` +
-      `${d.title}\n${d.documentUrl}`,
+  const blocks = disclosures.map((d) =>
+    [
+      `${formatTime(d.disclosedAt)} ${d.code} ${d.companyName} [${kindLabel[d.kind]}]`,
+      d.title,
+      // URL の無い開示で末尾に空行を作らないよう、行ごと落とす
+      ...(d.documentUrl === null ? [] : [d.documentUrl]),
+    ].join('\n'),
   );
 
   return [heading(disclosures), ...blocks].join('\n\n');

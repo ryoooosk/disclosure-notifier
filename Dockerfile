@@ -9,5 +9,5 @@ RUN npm i -g corepack && corepack enable && pnpm ci
 
 VOLUME [ "/app/node_modules" ]
 
-# docker build -t tdnet-notifier .
-# docker run --rm -it -v "$PWD:/app" tdnet-notifier bash
+# docker build -t disclosure-notifier .
+# docker run --rm -it -v "$PWD:/app" disclosure-notifier bash

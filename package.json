@@ -1,7 +1,7 @@
 {
-  "name": "tdnet-notifier",
+  "name": "disclosure-notifier",
   "version": "1.0.0",
-  "description": "TDnet の適時開示をウォッチリストで絞ってメール通知する",
+  "description": "TDnet の適時開示と EDINET の法定開示をウォッチリストで絞ってメール通知する",
   "main": "index.js",
   "scripts": {
     "dev": "node --watch --env-file=.env src/server.ts",

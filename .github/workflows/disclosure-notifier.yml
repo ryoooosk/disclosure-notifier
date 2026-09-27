@@ -1,4 +1,4 @@
-name: tdnet-notifier
+name: disclosure-notifier
 
 on:
   schedule:
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  tdnet-notifier:
+  disclosure-notifier:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -21,9 +21,10 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_FROM: ${{ vars.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          EDINET_DB_API_KEY: ${{ secrets.EDINET_DB_API_KEY }}
         run: |
           missing=()
-          for name in WATCHLIST_JSONC RESEND_API_KEY EMAIL_FROM EMAIL_TO; do
+          for name in WATCHLIST_JSONC RESEND_API_KEY EMAIL_FROM EMAIL_TO EDINET_DB_API_KEY; do
             [ -n "${!name}" ] || missing+=("$name")
           done
           if [ ${#missing[@]} -gt 0 ]; then
@@ -49,6 +50,7 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_FROM: ${{ vars.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          EDINET_DB_API_KEY: ${{ secrets.EDINET_DB_API_KEY }}
 
       - name: failure notice
         # 設定が揃っていない（verify config が落ちた）ときは送りようがないので送らない
@@ -66,8 +68,8 @@ jobs:
             '{
               from: $from,
               to: [$to],
-              subject: "tdnet-notifier が失敗しました",
-              text: "tdnet-notifier の実行が失敗しました。開示があっても通知は届いていません。\n\n実行ログ: \($url)"
+              subject: "disclosure-notifier が失敗しました",
+              text: "disclosure-notifier の実行が失敗しました。開示があっても通知は届いていません。\n\n実行ログ: \($url)"
             }' \
             | curl -sS --fail-with-body \
                 -X POST https://api.resend.com/emails \

@@ -1,6 +1,6 @@
-# tdnet-notifier
+# disclosure-notifier
 
-TDnet の適時開示を 1 日 1 回チェックし、ウォッチリストに入れた銘柄のものだけをメールで通知する。
+TDnet の適時開示と EDINET の法定開示を 1 日 1 回チェックし、ウォッチリストに入れた銘柄のものだけをメールで通知する。
 
 開発中。GitHub Actions の cron で毎日 17:30 JST に実行する。
 
@@ -34,7 +34,7 @@ node --env-file=.env src/index.ts
 
 ## GitHub Actions
 
-[.github/workflows/tdnet-notifier.yml](.github/workflows/tdnet-notifier.yml) が毎日 17:30 JST に実行する。
+[.github/workflows/disclosure-notifier.yml](.github/workflows/disclosure-notifier.yml) が毎日 17:30 JST に実行する。
 `watchlist.jsonc` と `.env` はリポジトリに無いので、以下を登録しておく必要がある。
 
 | 名前 | 種別 | 内容 |

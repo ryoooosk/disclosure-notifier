@@ -1,6 +1,6 @@
 import { setTimeout as sleep } from 'node:timers/promises';
 
-const USER_AGENT = 'tdnet-notifier';
+const USER_AGENT = 'disclosure-notifier';
 /** 配信元への負荷を抑えるための最小リクエスト間隔 */
 const MIN_REQUEST_INTERVAL_MS = 1_000;
 type HttpMethod = 'GET' | 'POST' | 'DELETE' | 'PUT' | 'PATCH' | 'HEAD';

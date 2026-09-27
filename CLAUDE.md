@@ -1,4 +1,4 @@
-# tdnet-notifier
+# disclosure-notifier
 
 ## コマンド実行
 
