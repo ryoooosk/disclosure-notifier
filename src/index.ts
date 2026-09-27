@@ -20,7 +20,7 @@ async function main() {
   }
 
   const sent = await sendMail({
-    subject: `${today} の適時開示`,
+    subject: `${today} の開示`,
     html: renderDisclosureHtml(targetDisclosures),
     text: renderDisclosureText(targetDisclosures),
   });

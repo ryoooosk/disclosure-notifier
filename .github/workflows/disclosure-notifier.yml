@@ -1,4 +1,4 @@
-name: tdnet-notifier
+name: disclosure-notifier
 
 on:
   schedule:
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  tdnet-notifier:
+  disclosure-notifier:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -68,8 +68,8 @@ jobs:
             '{
               from: $from,
               to: [$to],
-              subject: "tdnet-notifier が失敗しました",
-              text: "tdnet-notifier の実行が失敗しました。開示があっても通知は届いていません。\n\n実行ログ: \($url)"
+              subject: "disclosure-notifier が失敗しました",
+              text: "disclosure-notifier の実行が失敗しました。開示があっても通知は届いていません。\n\n実行ログ: \($url)"
             }' \
             | curl -sS --fail-with-body \
                 -X POST https://api.resend.com/emails \
