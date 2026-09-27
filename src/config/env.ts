@@ -4,11 +4,9 @@ const envSchema = z.object({
   RESEND_API_KEY: z.string().min(1, { error: 'Resend の API キーが空です。' }),
   EMAIL_FROM: z.email({ error: '送信元メールアドレスが不正です。' }),
   EMAIL_TO: z.email({ error: '送信先メールアドレスが不正です' }),
-  // EDINET は未実装のためオプショナル
-  EDINET_API_KEY: z
+  EDINET_DB_API_KEY: z
     .string()
-    .min(1, { error: 'Edinet DB の APIキーが空です。' })
-    .optional(),
+    .min(1, { error: 'Edinet DB の APIキーが空です。' }),
 });
 
 export type Env = z.infer<typeof envSchema>;

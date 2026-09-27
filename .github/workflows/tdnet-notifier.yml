@@ -21,9 +21,10 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_FROM: ${{ vars.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          EDINET_DB_API_KEY: ${{ secrets.EDINET_DB_API_KEY }}
         run: |
           missing=()
-          for name in WATCHLIST_JSONC RESEND_API_KEY EMAIL_FROM EMAIL_TO; do
+          for name in WATCHLIST_JSONC RESEND_API_KEY EMAIL_FROM EMAIL_TO EDINET_DB_API_KEY; do
             [ -n "${!name}" ] || missing+=("$name")
           done
           if [ ${#missing[@]} -gt 0 ]; then
@@ -49,6 +50,7 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_FROM: ${{ vars.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          EDINET_DB_API_KEY: ${{ secrets.EDINET_DB_API_KEY }}
 
       - name: failure notice
         # 設定が揃っていない（verify config が落ちた）ときは送りようがないので送らない
