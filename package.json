@@ -25,15 +25,15 @@
   "packageManager": "pnpm@12.4.1",
   "type": "module",
   "devDependencies": {
-    "@biomejs/biome": "^2.5.14",
+    "@biomejs/biome": "^2.5.15",
     "@types/node": "^26.6.2",
-    "lefthook": "^2.1.14",
+    "lefthook": "^2.1.15",
     "typescript": "^7.0.2"
   },
   "dependencies": {
     "cheerio": "^1.2.0",
     "jsonc-parser": "^3.3.1",
-    "resend": "^6.28.1",
+    "resend": "^6.31.0",
     "zod": "^4.6.5"
   }
 }
