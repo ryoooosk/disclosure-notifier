@@ -2,13 +2,15 @@ import { createServer, type ServerResponse } from 'node:http';
 import z from 'zod';
 import { renderDisclosureHtml } from './presentation/render-disclosure-html.ts';
 import fetchWatchlistDisclosure from './usecase/fetch-watchlist-disclosure.ts';
-import { getToday } from './utils.ts';
+import { toScheduledTime } from './utils.ts';
 
 const HOSTNAME = '127.0.0.1';
 const PORT = 8787;
-const dateSchema = z.iso.date({
-  error: 'date は YYYY-MM-DD で指定してください',
-});
+const dateSchema = z.iso
+  .date({
+    error: 'date は YYYY-MM-DD で指定してください',
+  })
+  .optional();
 
 const server = createServer(async (req, res) => {
   try {
@@ -26,14 +28,19 @@ const server = createServer(async (req, res) => {
     if (url.pathname === '/health') return sendJson(res, 200, { status: 'ok' });
     if (url.pathname === '/preview') {
       const targetDateParams = url.searchParams.get('date');
-      const parsedDate = dateSchema.safeParse(targetDateParams ?? getToday());
+      const parsedDate = dateSchema.safeParse(targetDateParams ?? undefined);
 
       if (!parsedDate.success)
         return sendJson(res, 400, { error: z.prettifyError(parsedDate.error) });
 
-      const { disclosures, totalCount } = await fetchWatchlistDisclosure(
-        parsedDate.data,
-      );
+      // 日付を指定したら、その日の定時実行と同じ範囲を見せる。指定が無ければ今この時点で実行した場合の範囲
+      const baseTime =
+        parsedDate.data === undefined
+          ? new Date()
+          : toScheduledTime(parsedDate.data);
+
+      const { disclosures, totalCount } =
+        await fetchWatchlistDisclosure(baseTime);
       const html = renderDisclosureHtml(disclosures);
 
       return sendHtml(res, 200, html, {

@@ -51,6 +51,11 @@ const edinetdbEvent = z.object({
    * 確認できなかったため任意にしてある。無ければ event_date が唯一の時刻情報になる
    */
   event_timestamp: z.string().nullish(),
+  /**
+   * EDINET DB が検知した日時（RFC3339）。detected_since の比較対象で、取得範囲の上限もこれで絞る。
+   * ドキュメントには載っているが実際のレスポンスでは確認できていないため任意にしてある
+   */
+  detected_at: z.string().nullish(),
   /** 書類名・開示の表題。メール本文の見出しに使う */
   title: z.string(),
   event_type: z.string(),
@@ -78,23 +83,42 @@ interface SkippedEvent {
   readonly raw: unknown;
 }
 
+/** fetchEdinetdbEvents の条件。ページ送りは中で行うので limit / offset は受け取らない */
+interface FetchEdinetdbEventsParams
+  extends Omit<RequestEdinetdbEventsParams, 'limit' | 'offset'> {
+  /**
+   * この時刻より前に検知されたものだけを返す。API は detected_since（>=）しか受け付けないので、
+   * レスポンスの detected_at で手元で絞る。detectedSince と合わせて [since, before) の半開区間になる
+   */
+  readonly detectedBefore?: Date;
+}
+
 /** 条件に一致したイベントを読み切った結果 */
 interface EdinetdbEvents {
   readonly disclosures: readonly Disclosure[];
   /**
-   * 条件に一致した総件数。証券コードを持たない提出者を除くため、
-   * disclosures.length より大きくなるのが普通
+   * API が返した条件一致の総件数。証券コードを持たない提出者や
+   * detectedBefore 以降に検知されたものも含むため、disclosures.length より大きくなるのが普通
    */
   readonly totalCount: number;
   readonly skippedEvents: readonly SkippedEvent[];
+  /** detectedBefore を指定したのに detected_at が読めず、範囲内として残したイベントの件数 */
+  readonly undatedCount: number;
 }
 
 /** 1 件を読んだ結果。捨てた理由と、対象外なだけの場合を区別する */
 type ReadResult =
-  | { readonly status: 'ok'; readonly disclosure: Disclosure }
+  | {
+      readonly status: 'ok';
+      readonly disclosure: Disclosure;
+      /** detected_at が読めず、範囲内として残したか */
+      readonly undated: boolean;
+    }
   | { readonly status: 'skipped'; readonly reason: string }
   /** 証券コードを持たない提出者。異常ではないので skippedEvents には積まない */
-  | { readonly status: 'notListed' };
+  | { readonly status: 'notListed' }
+  /** 取得範囲の上限以降に検知されたもの。次回の範囲に入るので skippedEvents には積まない */
+  | { readonly status: 'outOfRange' };
 
 /**
  * @description 条件に一致するイベントをページ送りしながら全件取得し、Disclosure に変換できたものだけを返す。
@@ -102,16 +126,18 @@ type ReadResult =
  * 外枠（data / meta）が読めない場合だけ、API の構造が変わったとみなして投げる。
  */
 export async function fetchEdinetdbEvents(
-  params: Omit<RequestEdinetdbEventsParams, 'limit' | 'offset'> = {},
+  params: FetchEdinetdbEventsParams = {},
 ): Promise<EdinetdbEvents> {
+  const { detectedBefore, ...requestParams } = params;
   const disclosures: Disclosure[] = [];
   const skippedEvents: SkippedEvent[] = [];
   let totalCount = 0;
+  let undatedCount = 0;
   let offset = 0;
 
   do {
     const edinetEvent = await requestEdinetdbEvents({
-      ...params,
+      ...requestParams,
       limit: PAGE_SIZE,
       offset,
     });
@@ -119,13 +145,14 @@ export async function fetchEdinetdbEvents(
     totalCount = response.meta.pagination.total;
 
     for (const [index, raw] of response.data.entries()) {
-      const read = readEvent(raw);
-      if (read.status === 'notListed') continue;
+      const read = readEvent(raw, detectedBefore);
+      if (read.status === 'notListed' || read.status === 'outOfRange') continue;
       if (read.status === 'skipped') {
         skippedEvents.push({ index: offset + index, reason: read.reason, raw });
         continue;
       }
 
+      if (read.undated) undatedCount++;
       disclosures.push(read.disclosure);
     }
 
@@ -137,16 +164,19 @@ export async function fetchEdinetdbEvents(
     offset += response.data.length;
   } while (offset < totalCount);
 
-  return { disclosures, totalCount, skippedEvents };
+  return { disclosures, totalCount, skippedEvents, undatedCount };
 }
 
 /** @description イベント 1 件を読み、Disclosure に変換できるかを判定する。*/
-function readEvent(raw: unknown): ReadResult {
+function readEvent(raw: unknown, detectedBefore: Date | undefined): ReadResult {
   const parsed = edinetdbEvent.safeParse(raw);
   if (!parsed.success) {
     return { status: 'skipped', reason: z.prettifyError(parsed.error) };
   }
   const event = parsed.data;
+
+  const range = checkDetectedRange(event, detectedBefore);
+  if (range === 'outOfRange') return { status: 'outOfRange' };
 
   // 投資信託の受益証券など、ウォッチリストと照合しようがない提出者の開示
   if (event.sec_code === null) return { status: 'notListed' };
@@ -154,7 +184,29 @@ function readEvent(raw: unknown): ReadResult {
   const problem = findProblem(event);
   if (problem !== null) return { status: 'skipped', reason: problem };
 
-  return { status: 'ok', disclosure: toDisclosure(event) };
+  return {
+    status: 'ok',
+    disclosure: toDisclosure(event),
+    undated: range === 'undated',
+  };
+}
+
+/**
+ * @description detected_at が取得範囲の上限より前かを判定する。
+ * detected_at が無い・読めないイベントは判定できないので undated として範囲内に残す。
+ * 取りこぼすより、次回の範囲と重複するほうがまし
+ */
+function checkDetectedRange(
+  event: EdinetdbEvent,
+  detectedBefore: Date | undefined,
+): 'inRange' | 'outOfRange' | 'undated' {
+  if (detectedBefore === undefined) return 'inRange';
+
+  // 文字列のまま比べると、Z と +09:00 の表記揺れや小数秒の有無で順序が狂うので時刻に直して比べる
+  const detectedAt = new Date(event.detected_at ?? '').getTime();
+  if (Number.isNaN(detectedAt)) return 'undated';
+
+  return detectedAt < detectedBefore.getTime() ? 'inRange' : 'outOfRange';
 }
 
 /**

@@ -5,6 +5,11 @@ on:
     # 毎日 JST 17:30（UTC 08:30）に実行
     - cron: "30 8 * * *"
   workflow_dispatch:
+    inputs:
+      scheduled_at:
+        description: "基準時刻。TDnet の対象日と EDINET DB の取得範囲がこの時刻で決まる。YYYY-MM-DD ならその日の 17:30 JST、ISO 8601 の日時も可。空なら現在時刻"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -44,9 +49,32 @@ jobs:
           WATCHLIST_JSONC: ${{ secrets.WATCHLIST_JSONC }}
         run: printf '%s' "$WATCHLIST_JSONC" > src/data-source/watchlist/watchlist.jsonc
 
-      - name: execute Application
-        run: node src/index.ts
+      - name: resolve scheduled_at
+        id: scheduled_at
         env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_SCHEDULED_AT: ${{ inputs.scheduled_at }}
+        run: |
+          if [ "$EVENT_NAME" = schedule ]; then
+            # schedule は数時間遅れて起動するので、cron の予定時刻（直前の UTC 08:30）を基準時刻にする。
+            # 上の cron と揃えておき、Workers Cron に移して schedule を消すときにこの分岐も消す。
+            # re-run するとその時点から計算し直すので、後日やり直すときは scheduled_at を指定して手動実行する
+            scheduled=$(date -u -d 'today 08:30' +%s)
+            if [ "$scheduled" -gt "$(date -u +%s)" ]; then
+              scheduled=$((scheduled - 24 * 60 * 60))
+            fi
+            scheduled_at=$(date -u -d "@$scheduled" +%Y-%m-%dT%H:%M:%SZ)
+          else
+            # 空なら現在時刻、不正な値ならアプリ側で落ちる
+            scheduled_at=$INPUT_SCHEDULED_AT
+          fi
+          echo "value=$scheduled_at" >> "$GITHUB_OUTPUT"
+
+      - name: execute Application
+        # 入力は run に直接埋め込まず、env を経由して渡す（スクリプトインジェクション対策）
+        run: node src/index.ts --scheduled-at "$SCHEDULED_AT"
+        env:
+          SCHEDULED_AT: ${{ steps.scheduled_at.outputs.value }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_FROM: ${{ vars.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}

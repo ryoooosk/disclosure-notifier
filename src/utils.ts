@@ -1,8 +1,17 @@
+/** 定時実行の基準時刻（JST）。cron の `30 8 * * *`（UTC）にあたる */
+const SCHEDULED_JST_TIME = '17:30';
+
 /**
- * @description JST の今日を YYYY-MM-DD 形式で返す
+ * @description JST の日付（YYYY-MM-DD）を、その日の定時実行の基準時刻にする
  */
-export const getToday = () =>
-  new Date()
+export const toScheduledTime = (date: string) =>
+  new Date(`${date}T${SCHEDULED_JST_TIME}:00+09:00`);
+
+/**
+ * @description 指定した時刻が JST で何日にあたるかを YYYY-MM-DD 形式で返す
+ */
+export const toJstDate = (at: Date) =>
+  at
     .toLocaleDateString('ja-JP', {
       timeZone: 'Asia/Tokyo',
       year: 'numeric',
