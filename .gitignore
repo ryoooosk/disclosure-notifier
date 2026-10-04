@@ -3,3 +3,5 @@ node_modules/
 !.env.example
 docs/
 watchlist.jsonc
+.wrangler/
+.dev.vars*
