@@ -32,6 +32,15 @@ cp .env.example .env
 node --env-file=.env src/index.ts
 ```
 
+普段はこれだけでよい。TDnet は実行した日（JST）の分を、EDINET は直前 24 時間に検知された分を見る。
+
+取りこぼした過去の日をやり直すときだけ、`--scheduled-at` でその日付を渡す。
+その日の 17:30 JST に定時実行した場合と同じ範囲を処理する。
+
+```bash
+node --env-file=.env src/index.ts --scheduled-at 2026-09-28
+```
+
 ## GitHub Actions
 
 [.github/workflows/disclosure-notifier.yml](.github/workflows/disclosure-notifier.yml) が毎日 17:30 JST に実行する。
@@ -53,6 +62,13 @@ gh variable set EMAIL_FROM
 
 監視銘柄を入れ替えたら `WATCHLIST_JSONC` の更新を忘れないこと。忘れても失敗せず、
 古いウォッチリストのまま通知が届き続ける。
+
+取りこぼした日を後から処理するときは、基準時刻を指定して手動実行する。
+cron で起動した run を後日 re-run すると、re-run した時点から基準時刻を決め直すので使わない。
+
+```bash
+gh workflow run disclosure-notifier.yml -f scheduled_at=2026-09-28
+```
 
 なお、60 日間リポジトリに活動がないと GitHub 側で cron が自動停止する。
 止まったら Actions の画面から手動で再有効化する。
