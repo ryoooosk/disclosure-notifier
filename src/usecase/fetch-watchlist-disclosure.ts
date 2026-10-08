@@ -1,29 +1,28 @@
-import { fetchEdinetdbEvents } from '../data-source/edinetdb/fetch-events.ts';
+import { fetchEdinetDocuments } from '../data-source/edinet/fetch-documents.ts';
 import { fetchDisclosures } from '../data-source/tdnet/fetch-disclosures.ts';
 import { loadWatchList } from '../data-source/watchlist/load-watch-list.ts';
-import { edinetdbEventType } from '../lib/edinetdb.ts';
 import type { Disclosure } from '../model/disclosure.ts';
 import { toJstDate } from '../utils.ts';
 
 /**
  * @description 基準時刻の時点で通知すべき、ウォッチリスト銘柄の開示を集める。
- * TDnet は基準時刻が JST で属する日、EDINET DB は基準時刻までの 1 日に検知された分を対象にする
+ * TDnet は基準時刻が JST で属する日、EDINET は基準時刻までの 1 日に提出された分を対象にする
  */
 export default async function fetchWatchlistDisclosure(
   baseTime: Date,
 ): Promise<{ disclosures: Disclosure[]; totalCount: number }> {
-  const [tdnet, edinetdb] = await Promise.all([
+  const [tdnet, edinet] = await Promise.all([
     fetchTdnet(toJstDate(baseTime)),
-    fetchEdinetdb(baseTime),
+    fetchEdinet(baseTime),
   ]);
 
   const targetCodes = loadWatchList();
 
   return {
-    disclosures: [...tdnet.disclosures, ...edinetdb.disclosures].filter((d) =>
+    disclosures: [...tdnet.disclosures, ...edinet.disclosures].filter((d) =>
       targetCodes.has(d.code),
     ),
-    totalCount: tdnet.totalCount + edinetdb.totalCount,
+    totalCount: tdnet.totalCount + edinet.totalCount,
   };
 }
 
@@ -54,51 +53,31 @@ async function fetchTdnet(
 }
 
 /**
- * @description 前回の基準時刻から今回の基準時刻までに取り込まれた法定開示を EDINET DB から取得する。
- * event_date で絞らないのは、大量保有系の event_date が提出日ではなく報告義務発生日で、同じ日付のイベントが数営業日にわたって追加されるため。
+ * @description 前回の基準時刻から今回の基準時刻までに提出された法定開示を EDINET から取得する。
+ * 大量保有報告書も報告義務発生日ではなく提出日時で絞るので、遅れて出た報告書も提出された回で拾える。
  * 前回の基準時刻は保存していないので、実行間隔ぶん遡った時刻で代用する。
  * 範囲は [前回, 今回) の半開区間なので、基準時刻が実行間隔ちょうどで進む限り、重複も取りこぼしも出ない
  */
-async function fetchEdinetdb(baseTime: Date): Promise<{
+async function fetchEdinet(baseTime: Date): Promise<{
   disclosures: readonly Disclosure[];
   totalCount: number;
 }> {
   /** 前回の実行から今回までの間隔。1 日 1 回、同じ時刻を基準時刻にして動かしている */
   const RUN_INTERVAL_MS = 24 * 60 * 60 * 1000;
-  const detectedSince = new Date(
-    baseTime.getTime() - RUN_INTERVAL_MS,
-  ).toISOString();
 
-  // TDnet にも出る決算短信・TOB・自己株取得などは同じ開示が二重に届くので、EDINET にしか出ない法定開示だけに絞る
-  const edinetdbOnlyEventTypes = [
-    edinetdbEventType.yuhou,
-    edinetdbEventType.yuhouCorrection,
-    edinetdbEventType.semiAnnualReport,
-    edinetdbEventType.largeHoldingReport,
-    edinetdbEventType.largeHoldingChange,
-  ];
-
-  const { disclosures, skippedEvents, undatedCount, totalCount } =
-    await fetchEdinetdbEvents({
-      detectedSince,
-      detectedBefore: baseTime,
-      eventTypes: edinetdbOnlyEventTypes,
+  const { disclosures, skippedDocuments, totalCount } =
+    await fetchEdinetDocuments({
+      submittedSince: new Date(baseTime.getTime() - RUN_INTERVAL_MS),
+      submittedBefore: baseTime,
     });
 
-  // 上限で絞れなかった分は次回の範囲にも入りうる。続くようなら EDINET DB 側のレスポンス変化を疑う
-  if (undatedCount > 0) {
+  // 読めずに捨てた書類は EDINET 側のレスポンス変化のサイン
+  if (skippedDocuments.length > 0) {
     console.warn(
-      `EDINET DB の ${undatedCount} 件は detected_at が読めず、取得範囲の上限で絞れませんでした`,
+      `EDINET で読み取れなかった書類が ${skippedDocuments.length} 件あります:`,
     );
-  }
-
-  // 読めずに捨てたイベントは EDINET DB 側のレスポンス変化のサイン
-  if (skippedEvents.length > 0) {
-    console.warn(
-      `EDINET DB で読み取れなかったイベントが ${skippedEvents.length} 件あります:`,
-    );
-    for (const event of skippedEvents) {
-      console.warn(`  [${event.index}] ${event.reason}`);
+    for (const document of skippedDocuments) {
+      console.warn(`  [${document.date} ${document.index}] ${document.reason}`);
     }
   }
 

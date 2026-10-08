@@ -3,7 +3,7 @@ import z from 'zod';
 /**
  * 開示の取得元。originalId の ID 空間がソースごとに違う。
  */
-const disclosureSource = ['tdnet', 'edinet', 'edinetdb'] as const;
+const disclosureSource = ['tdnet', 'edinet'] as const;
 
 /**
  * 開示の種別。TDnet の一覧に種別カラムは無いため、表題の文字列から判定する。
@@ -19,7 +19,7 @@ const disclosureKind = [
   'specialLoss',
   /** 公開買付け（TOB / MBO）、意見表明、買付結果 */
   'tenderOffer',
-  /** 大量保有報告書、変更報告書。TDnet には出ないので EDINET DB 由来のみ */
+  /** 大量保有報告書、変更報告書。TDnet には出ないので EDINET 由来のみ */
   'largeHolding',
   /** 合併、株式交換、株式移転、会社分割 */
   'merger',
@@ -79,7 +79,7 @@ export const disclosure = z.object({
   companyName: z.string(),
   title: z.string(),
   kind: z.enum(disclosureKind),
-  /** 開示文書の URL。EDINET DB 経由のイベントは docID を返さない*/
+  /** 開示文書の URL。EDINET の書類は PDF が無いものだけ null */
   documentUrl: z.string().nullable(),
   disclosedAt: z.iso.datetime(),
 });
