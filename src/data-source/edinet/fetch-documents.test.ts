@@ -387,4 +387,16 @@ describe('fetchEdinetDocuments', () => {
       return true;
     });
   });
+
+  test('通信に失敗したら、キーを含めずに投げる', async () => {
+    mock.method(globalThis, 'fetch', async () => {
+      throw new TypeError('fetch failed');
+    });
+
+    await assert.rejects(fetchEdinetDocuments(RANGE), (error: Error) => {
+      assert.match(error.message, /documents\.json に接続できませんでした/);
+      assert.doesNotMatch(error.message, new RegExp(API_KEY));
+      return true;
+    });
+  });
 });
