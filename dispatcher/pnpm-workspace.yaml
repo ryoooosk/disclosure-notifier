@@ -1,0 +1,4 @@
+# ルートのワークスペースから切り離すために置く
+allowBuilds:
+  esbuild: true
+  workerd: true

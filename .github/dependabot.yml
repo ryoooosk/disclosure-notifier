@@ -12,7 +12,10 @@ updates:
       prefix: "chore"
 
   - package-ecosystem: "npm"
-    directory: "/"
+    # dispatcher/ は独立した pnpm ワークスペースなので別に指定する
+    directories:
+      - "/"
+      - "/dispatcher"
     schedule:
       interval: "weekly"
     groups:

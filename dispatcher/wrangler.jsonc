@@ -1,0 +1,16 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "disclosure-dispatcher",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-04",
+  // scheduled ハンドラしか持たないので、*.workers.dev の公開 URL は作らない
+  "workers_dev": false,
+  "preview_urls": false,
+  "triggers": {
+    // UTC 08:30 = JST 17:30
+    "crons": ["30 8 * * *"]
+  },
+  "observability": {
+    "enabled": true
+  }
+}

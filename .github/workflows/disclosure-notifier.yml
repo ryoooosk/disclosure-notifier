@@ -16,6 +16,8 @@ permissions:
 
 jobs:
   disclosure-notifier:
+    # dispatcher（Cloudflare Workers）から起動する場合は、同じ日に 2 回走らないよう schedule の回を飛ばす
+    if: github.event_name != 'schedule' || vars.DISPATCHER_ENABLED != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -57,7 +59,7 @@ jobs:
         run: |
           if [ "$EVENT_NAME" = schedule ]; then
             # schedule は数時間遅れて起動するので、cron の予定時刻（直前の UTC 08:30）を基準時刻にする。
-            # 上の cron と揃えておき、Workers Cron に移して schedule を消すときにこの分岐も消す。
+            # 上の cron と揃えておく。
             # re-run するとその時点から計算し直すので、後日やり直すときは scheduled_at を指定して手動実行する
             scheduled=$(date -u -d 'today 08:30' +%s)
             if [ "$scheduled" -gt "$(date -u +%s)" ]; then
