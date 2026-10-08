@@ -40,6 +40,7 @@ export function extractZipEntry(zip: Uint8Array, name: string): Uint8Array {
         method: view.getUint16(offset + 10, true),
         crc: view.getUint32(offset + 16, true),
         compressedSize: view.getUint32(offset + 20, true),
+        uncompressedSize: view.getUint32(offset + 24, true),
         localHeaderOffset: view.getUint32(offset + 42, true),
       });
     }
@@ -72,6 +73,7 @@ function readEntry(
     readonly method: number;
     readonly crc: number;
     readonly compressedSize: number;
+    readonly uncompressedSize: number;
     readonly localHeaderOffset: number;
   },
 ): Uint8Array {
@@ -89,8 +91,13 @@ function readEntry(
 
   let data: Uint8Array;
   if (entry.method === METHOD_STORED) data = compressed;
-  else if (entry.method === METHOD_DEFLATED) data = inflateRawSync(compressed);
-  else throw new Error(`zip の圧縮方式 ${entry.method} には対応していません`);
+  else if (entry.method === METHOD_DEFLATED) {
+    // 極端に膨らむ zip でメモリを使い切らないよう、展開後の大きさを中央ディレクトリの値で抑える。
+    // 超えると ERR_BUFFER_TOO_LARGE で投げる。maxOutputLength は 1 以上しか受け付けない
+    data = inflateRawSync(compressed, {
+      maxOutputLength: Math.max(entry.uncompressedSize, 1),
+    });
+  } else throw new Error(`zip の圧縮方式 ${entry.method} には対応していません`);
 
   if (crc32(data) !== entry.crc) {
     throw new Error('zip から取り出したデータの CRC-32 が一致しません');

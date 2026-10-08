@@ -64,6 +64,20 @@ describe('extractZipEntry', () => {
     assert.throws(() => extractZipEntry(zip, 'list.csv'), /CRC-32/);
   });
 
+  test('展開後の大きさが中央ディレクトリの値を超えたら投げる', () => {
+    const zip = buildZip({ 'list.csv': encode('a'.repeat(10_000)) });
+    // 小さい Buffer は共有のプールから切り出されるので、byteOffset を合わせる
+    const view = new DataView(zip.buffer, zip.byteOffset, zip.byteLength);
+    // 終端レコード（末尾 22 バイト）の 16 バイト目に中央ディレクトリの位置が入っている
+    const central = view.getUint32(zip.length - 6, true);
+    // 中央ディレクトリの展開後サイズを、実際より小さく書き換える
+    view.setUint32(central + 24, 10, true);
+
+    assert.throws(() => extractZipEntry(zip, 'list.csv'), {
+      code: 'ERR_BUFFER_TOO_LARGE',
+    });
+  });
+
   test('zip でないデータは投げる', () => {
     assert.throws(
       () => extractZipEntry(encode('<html>Sorry</html>'), 'list.csv'),
