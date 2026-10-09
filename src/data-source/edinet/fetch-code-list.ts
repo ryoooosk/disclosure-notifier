@@ -62,38 +62,25 @@ export async function fetchEdinetCodeList(): Promise<
  * 社名の英字表記などにカンマを含む値があり、値は "" で囲まれているので、split では切れない
  */
 function parseCsv(text: string): string[][] {
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let field = '';
-  let quoted = false;
+  if (text === '') return [];
+  // g や y の正規表現は lastIndex を持つので、モジュールで共有せず呼び出しごとに作る
+  /** 1 行分。"" の囲みの中の改行では切らない */
+  const ROW = /((?:"(?:[^"]|"")*"|[^"\r\n])*)\r?\n/gy;
+  /** 1 つの値と後ろのカンマ。"" の囲みの中のカンマでは切らない */
+  const FIELD = /(?:"((?:[^"]|"")*)"|([^",]*)),/gy;
 
-  for (let i = 0; i < text.length; i++) {
-    const c = text.charAt(i);
-
-    if (quoted) {
-      if (c !== '"') field += c;
-      // 囲みの中の "" は " 1 文字を表す
-      else if (text.charAt(i + 1) === '"') {
-        field += '"';
-        i++;
-      } else quoted = false;
-    } else if (c === '"') quoted = true;
-    else if (c === ',') {
-      row.push(field);
-      field = '';
-    } else if (c === '\n') {
-      row.push(field);
-      rows.push(row);
-      row = [];
-      field = '';
-    } else if (c !== '\r') field += c;
-  }
-
-  // 末尾が改行で終わっていない場合の最終行
-  if (field !== '' || row.length > 0) {
-    row.push(field);
-    rows.push(row);
-  }
-
-  return rows;
+  // どちらの正規表現も区切りまでを 1 回の一致とするので、最終行の改行と最終列のカンマを補う
+  const lines = text.endsWith('\n') ? text : `${text}\n`;
+  return lines
+    .matchAll(ROW)
+    .map(([, line = '']) =>
+      `${line},`
+        .matchAll(FIELD)
+        .map(([, quoted, plain = '']) =>
+          // 囲みの中の "" は " 1 文字を表す
+          quoted === undefined ? plain : quoted.replaceAll('""', '"'),
+        )
+        .toArray(),
+    )
+    .toArray();
 }
