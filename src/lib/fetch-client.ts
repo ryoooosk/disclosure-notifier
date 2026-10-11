@@ -39,7 +39,9 @@ async function _fetch(
       headers: { 'User-Agent': USER_AGENT, ...headers },
     });
   } catch (cause) {
-    // DNS 解決失敗・接続断・中断など。fetch はこれらをまとめて TypeError で投げる
-    throw new Error(`${method} ${url} に接続できませんでした`, { cause });
+    // DNS 解決失敗・接続断・中断など。fetch はこれらをまとめて TypeError で投げる。
+    // EDINET のように API キーをクエリで渡す取得先があるので、クエリとフラグメントは載せない
+    const target = url.replace(/[?#].*$/s, '');
+    throw new Error(`${method} ${target} に接続できませんでした`, { cause });
   }
 }

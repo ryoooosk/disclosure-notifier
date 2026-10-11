@@ -32,7 +32,7 @@ cp .env.example .env
 node --env-file=.env src/index.ts
 ```
 
-普段はこれだけでよい。TDnet は実行した日（JST）の分を、EDINET は直前 24 時間に検知された分を見る。
+普段はこれだけでよい。TDnet は実行した日（JST）の分を、EDINET は直前 24 時間に提出された分を見る。
 
 取りこぼした過去の日をやり直すときだけ、`--scheduled-at` でその日付を渡す。
 その日の 17:30 JST に定時実行した場合と同じ範囲を処理する。
@@ -51,12 +51,14 @@ node --env-file=.env src/index.ts --scheduled-at 2026-09-28
 | `WATCHLIST_JSONC` | Secret | `watchlist.jsonc` の中身そのまま |
 | `RESEND_API_KEY` | Secret | Resend の API キー |
 | `EMAIL_TO` | Secret | 通知先アドレス |
+| `EDINET_API_KEY` | Secret | EDINET API の API キー |
 | `EMAIL_FROM` | Variable | 送信元アドレス（Phase 1 は `onboarding@resend.dev`） |
 
 ```bash
 gh secret set WATCHLIST_JSONC < src/data-source/watchlist/watchlist.jsonc
 gh secret set RESEND_API_KEY
 gh secret set EMAIL_TO
+gh secret set EDINET_API_KEY
 gh variable set EMAIL_FROM
 ```
 
@@ -124,7 +126,7 @@ pnpm exec wrangler secret put GITHUB_TOKEN  # 初回と、トークンを更新�
 
 ## 取得先への配慮
 
-TDnet の一覧ページは 1 秒以上の間隔を空け、User-Agent にこのリポジトリの URL を付けて取得している
+TDnet の一覧ページと EDINET の書類一覧は 1 秒以上の間隔を空け、User-Agent にこのリポジトリの URL を付けて取得している
 （[src/lib/fetch-client.ts](src/lib/fetch-client.ts)）。fork して動かす場合は cron の頻度を上げすぎないこと。
 TDnet の利用条件は各自で確認すること。
 

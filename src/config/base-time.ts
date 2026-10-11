@@ -18,7 +18,7 @@ const scheduledAtSchema = z.union(
 );
 
 /**
- * @description コマンドライン引数から処理の基準時刻を決める。TDnet の対象日と EDINET DB の取得範囲はこの時刻から決まる。
+ * @description コマンドライン引数から処理の基準時刻を決める。TDnet の対象日と EDINET の取得範囲はこの時刻から決まる。
  * Workers Cron から起動したときは予定時刻が渡るので、起動が遅れても対象日はずれない。
  * 未指定なら現在時刻を使う。不正な値は別の日を処理しかねないので、現在時刻に倒さず投げる
  * @param args `process.argv.slice(2)`

@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       scheduled_at:
-        description: "基準時刻。TDnet の対象日と EDINET DB の取得範囲がこの時刻で決まる。YYYY-MM-DD ならその日の 17:30 JST、ISO 8601 の日時も可。空なら現在時刻"
+        description: "基準時刻。TDnet の対象日と EDINET の取得範囲がこの時刻で決まる。YYYY-MM-DD ならその日の 17:30 JST、ISO 8601 の日時も可。空なら現在時刻"
         required: false
         type: string
 
@@ -28,10 +28,10 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_FROM: ${{ vars.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
-          EDINET_DB_API_KEY: ${{ secrets.EDINET_DB_API_KEY }}
+          EDINET_API_KEY: ${{ secrets.EDINET_API_KEY }}
         run: |
           missing=()
-          for name in WATCHLIST_JSONC RESEND_API_KEY EMAIL_FROM EMAIL_TO EDINET_DB_API_KEY; do
+          for name in WATCHLIST_JSONC RESEND_API_KEY EMAIL_FROM EMAIL_TO EDINET_API_KEY; do
             [ -n "${!name}" ] || missing+=("$name")
           done
           if [ ${#missing[@]} -gt 0 ]; then
@@ -80,7 +80,7 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_FROM: ${{ vars.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
-          EDINET_DB_API_KEY: ${{ secrets.EDINET_DB_API_KEY }}
+          EDINET_API_KEY: ${{ secrets.EDINET_API_KEY }}
 
       - name: failure notice
         # 設定が揃っていない（verify config が落ちた）ときは送りようがないので送らない
